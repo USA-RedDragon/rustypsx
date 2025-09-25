@@ -282,7 +282,7 @@ struct World {
     // FPS and performance tracking
     frame_times: Vec<Instant>,
     last_title_update: Instant,
-    frame: Option<[u8; FB_SIZE]>,
+    frame: Option<Box<[u8]>>,
     // Frame timing for 60fps
     last_frame_time: Instant,
     // Breakpoint status
@@ -344,14 +344,14 @@ impl World {
         }
     }
 
-    fn run_until_frame(&mut self) -> Option<[u8; FB_SIZE]> {
+    fn run_until_frame(&mut self) -> Result<Box<[u8]>, String> {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             self.ps1.run_until_frame(true)
         }));
 
         match result {
             Ok((frame_data, _breakpoint_hit)) => {
-                Some(frame_data)
+                Ok(frame_data)
             },
             Err(panic_info) => {
                 // Convert panic info to a string for debugging
@@ -363,13 +363,12 @@ impl World {
                     "Emulator panic: Unknown error".to_string()
                 };
 
-                println!("Emulator crashed: {}", error_msg);
-                None
+                Err(error_msg)
             }
         }
     }
 
-    fn run_until_frame_with_breakpoints(&mut self) -> (Option<[u8; FB_SIZE]>, bool) {
+    fn run_until_frame_with_breakpoints(&mut self) -> (Result<Box<[u8]>, String>, bool) {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             // Collect audio when running frames
             self.ps1.run_until_frame(true)
@@ -377,7 +376,7 @@ impl World {
 
         match result {
             Ok((frame_data, breakpoint_hit)) => {
-                (Some(frame_data), breakpoint_hit)
+                (Ok(frame_data), breakpoint_hit)
             },
             Err(panic_info) => {
                 // Convert panic info to a string for debugging
@@ -389,8 +388,7 @@ impl World {
                     "Emulator panic: Unknown error".to_string()
                 };
 
-                println!("Emulator crashed: {}", error_msg);
-                (None, false)
+                (Err(error_msg), false)
             }
         }
     }
@@ -400,11 +398,11 @@ impl World {
         if self.step_single_frame {
             self.step_single_frame = false;
             match self.run_until_frame() {
-                Some(frame_data) => {
+                Ok(frame_data) => {
                     self.frame = Some(frame_data);
                 }
-                None => {
-                    self.error_state = Some("Emulator crashed during frame step".to_string());
+                Err(err) => {
+                    self.error_state = Some(format!("Emulator crashed during frame step: {}", err));
                     self.frame = None;
                 }
             }
@@ -493,9 +491,10 @@ impl World {
             
             for _ in 0..count {
                 match self.run_until_frame() {
-                    Some(_) => {}, // Continue to next frame
-                    None => {
+                    Ok(_) => {}, // Continue to next frame
+                    Err(err) => {
                         success = false;
+                        self.error_state = Some(format!("Emulator crashed during multi-frame step ({}): {}", count, err));
                         break;
                     }
                 }
@@ -554,12 +553,12 @@ impl World {
         if self.ps1.get_breakpoints().is_empty() {
             // No breakpoints - use regular version for better performance
             match self.run_until_frame() {
-                Some(frame_data) => {
+                Ok(frame_data) => {
                     self.frame = Some(frame_data);
                     self.update_performance_metrics();
                 }
-                None => {
-                    self.error_state = Some("Emulator crashed".to_string());
+                Err(err) => {
+                    self.error_state = Some(err);
                     println!("Emulator crashed: {}", self.error_state.as_ref().unwrap());
                     self.frame = None;
                 }
@@ -568,7 +567,7 @@ impl World {
             // We have breakpoints - use breakpoint-aware version
             let (frame_result, breakpoint_hit) = self.run_until_frame_with_breakpoints();
             match frame_result {
-                Some(frame_data) => {
+                Ok(frame_data) => {
                     self.frame = Some(frame_data);
                     self.update_performance_metrics();
                     
@@ -579,8 +578,8 @@ impl World {
                         println!("Breakpoint hit at PC: {:04X}", self.ps1.get_cpu_registers().pc);
                     }
                 }
-                None => {
-                    self.error_state = Some("Emulator crashed".to_string());
+                Err(err) => {
+                    self.error_state = Some(err);
                     println!("Emulator crashed: {}", self.error_state.as_ref().unwrap());
                     self.frame = None;
                 }

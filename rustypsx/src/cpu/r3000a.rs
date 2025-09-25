@@ -21,7 +21,7 @@ impl R3000A {
 
     fn execute(&mut self, opcode: u8, _mmio: &mut memory::mmio::Mmio) -> u8 {
         match opcode {
-            _ => unimplemented!("Opcode {:02X} not implemented", opcode),
+            _ => panic!("Opcode {:02X} not implemented", opcode),
         }
     }
 }

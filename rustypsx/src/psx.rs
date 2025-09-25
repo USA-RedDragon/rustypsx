@@ -40,8 +40,8 @@ impl PS1 {
         self.cpu.registers.reset();
     }
 
-    pub fn get_current_frame(&mut self) -> [u8; display::FB_SIZE] {
-        [0; display::FB_SIZE]
+    pub fn get_current_frame(&mut self) -> Box<[u8]> {
+        vec![0; display::FB_SIZE].into_boxed_slice()
     }
 
     pub fn step_instruction(&mut self, _collect_audio: bool) -> (bool, u8) {
@@ -54,10 +54,10 @@ impl PS1 {
         (false, cycles)
     }
 
-    pub fn run_until_frame(&mut self, collect_audio: bool) -> ([u8; display::FB_SIZE], bool) {
+    pub fn run_until_frame(&mut self, collect_audio: bool) -> (Box<[u8]>, bool) {
         let mut cpu_cycles_this_frame = 0u32;
         const MAX_CYCLES_PER_FRAME: u32 = 1000; // Placeholder value
-        let frame = [0; display::FB_SIZE];
+        let frame = vec![0; display::FB_SIZE].into_boxed_slice();
         loop {
             let (breakpoint_hit, cycles) = self.step_instruction(collect_audio);
             cpu_cycles_this_frame += cycles as u32;

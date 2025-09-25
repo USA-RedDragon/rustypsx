@@ -11,7 +11,7 @@ pub struct PS1 {
     cpu: cpu::R3000A,
     mmio: memory::mmio::Mmio,
     #[serde(skip, default)]
-    breakpoints: HashSet<u16>,
+    breakpoints: HashSet<u32>,
 }
 
 impl Clone for PS1 {
@@ -40,8 +40,8 @@ impl PS1 {
         self.cpu.registers.reset();
     }
 
-    pub fn get_current_frame(&mut self) -> [u8; display::WIDTH as usize * display::HEIGHT as usize * 4] {
-        [0; display::WIDTH as usize * display::HEIGHT as usize * 4]
+    pub fn get_current_frame(&mut self) -> [u8; display::FB_SIZE] {
+        [0; display::FB_SIZE]
     }
 
     pub fn step_instruction(&mut self, _collect_audio: bool) -> (bool, u8) {
@@ -54,10 +54,10 @@ impl PS1 {
         (false, cycles)
     }
 
-    pub fn run_until_frame(&mut self, collect_audio: bool) -> ([u8; display::WIDTH as usize * display::HEIGHT as usize * 4], bool) {
+    pub fn run_until_frame(&mut self, collect_audio: bool) -> ([u8; display::FB_SIZE], bool) {
         let mut cpu_cycles_this_frame = 0u32;
         const MAX_CYCLES_PER_FRAME: u32 = 1000; // Placeholder value
-        let frame = [0; display::WIDTH as usize * display::HEIGHT as usize * 4];
+        let frame = [0; display::FB_SIZE];
         loop {
             let (breakpoint_hit, cycles) = self.step_instruction(collect_audio);
             cpu_cycles_this_frame += cycles as u32;
@@ -81,15 +81,15 @@ impl PS1 {
         &self.cpu.registers
     }
 
-    pub fn add_breakpoint(&mut self, address: u16) {
+    pub fn add_breakpoint(&mut self, address: u32) {
         self.breakpoints.insert(address);
     }
 
-    pub fn remove_breakpoint(&mut self, address: u16) {
+    pub fn remove_breakpoint(&mut self, address: u32) {
         self.breakpoints.remove(&address);
     }
 
-    pub fn get_breakpoints(&self) -> &HashSet<u16> {
+    pub fn get_breakpoints(&self) -> &HashSet<u32> {
         &self.breakpoints
     }
 }

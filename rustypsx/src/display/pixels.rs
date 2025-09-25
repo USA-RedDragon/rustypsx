@@ -11,8 +11,9 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 use pixels::{Error, Pixels, SurfaceTexture};
 
-pub const WIDTH: u32 = 640;
-pub const HEIGHT: u32 = 480;
+const WIDTH: u32 = 640;
+const HEIGHT: u32 = 480;
+pub const FB_SIZE: usize = (WIDTH * HEIGHT * 4) as usize;
 
 pub fn run_with_gui(ps1: psx::PS1, config: &config::CleanConfig) -> Result<(), Error> {
     let event_loop = EventLoop::new().unwrap();
@@ -281,7 +282,7 @@ struct World {
     // FPS and performance tracking
     frame_times: Vec<Instant>,
     last_title_update: Instant,
-    frame: Option<[u8; WIDTH as usize * HEIGHT as usize * 4]>,
+    frame: Option<[u8; FB_SIZE]>,
     // Frame timing for 60fps
     last_frame_time: Instant,
     // Breakpoint status
@@ -343,9 +344,8 @@ impl World {
         }
     }
 
-    fn run_until_frame(&mut self) -> Option<[u8; WIDTH as usize * HEIGHT as usize * 4]> {
+    fn run_until_frame(&mut self) -> Option<[u8; FB_SIZE]> {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            // Always use the DMG framebuffer for now and check CGB mode for palette processing
             self.ps1.run_until_frame(true)
         }));
 
@@ -369,7 +369,7 @@ impl World {
         }
     }
 
-    fn run_until_frame_with_breakpoints(&mut self) -> (Option<[u8; WIDTH as usize * HEIGHT as usize * 4]>, bool) {
+    fn run_until_frame_with_breakpoints(&mut self) -> (Option<[u8; FB_SIZE]>, bool) {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             // Collect audio when running frames
             self.ps1.run_until_frame(true)
@@ -635,11 +635,11 @@ impl World {
     }
 
     // Breakpoint management methods
-    fn add_breakpoint(&mut self, address: u16) {
+    fn add_breakpoint(&mut self, address: u32) {
         self.ps1.add_breakpoint(address);
     }
 
-    fn remove_breakpoint(&mut self, address: u16) {
+    fn remove_breakpoint(&mut self, address: u32) {
         self.ps1.remove_breakpoint(address);
     }
 

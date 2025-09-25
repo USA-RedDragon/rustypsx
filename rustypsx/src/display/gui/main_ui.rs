@@ -147,7 +147,7 @@ impl Gui {
 
                     if ui.button("Add").clicked() {
                         // Parse the address from hex string
-                        if let Ok(address) = u16::from_str_radix(self.breakpoint_address_input.trim_start_matches("0x"), 16) {
+                        if let Ok(address) = u32::from_str_radix(self.breakpoint_address_input.trim_start_matches("0x"), 16) {
                             *action = Some(GuiAction::SetBreakpoint(address));
                             self.breakpoint_address_input = String::from("0000");
                         }
@@ -162,7 +162,7 @@ impl Gui {
                     ui.label("Active Breakpoints:");
                     ui.separator();
 
-                    let breakpoints: Vec<u16> = ps1.get_breakpoints().iter().cloned().collect();
+                    let breakpoints: Vec<u32> = ps1.get_breakpoints().iter().cloned().collect();
                     if breakpoints.is_empty() {
                         ui.label("No breakpoints set");
                     } else {

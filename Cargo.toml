@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "rustypsx",
+]
+default-members = ["rustypsx"]
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+strip = true
+opt-level = "s"
+lto = true
